@@ -42,7 +42,6 @@ scanCanvas.width = 160;
 scanCanvas.height = 120;
 const scanCtx = scanCanvas.getContext("2d", { willReadFrequently: true });
 
-// Normalize Candidate Credentials
 function getNormalizedCandidate() {
     const rawRoll = localStorage.getItem("roll") || "";
     const rawName = localStorage.getItem("name") || "Candidate";
