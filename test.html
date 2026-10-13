@@ -40,8 +40,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Mukta:wght@500;600;700;800&family=Hind:wght@500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Optional external CSS link with cache-busting fallback -->
-    <link rel="stylesheet" href="test.css?v=5.0" onerror="this.onerror=null;this.href='css/test.css';">
+    <!-- External CSS link with v7.0 cache buster -->
+    <link rel="stylesheet" href="test.css?v=7.0" onerror="this.onerror=null;this.href='css/test.css';">
 
     <style>
         :root {
@@ -225,16 +225,15 @@
             cursor: pointer;
         }
 
-        /* 🔢 TOP HORIZONTAL PALETTE STRIP */
         .palette-strip-container {
-            width: 100%;
+            width: 100% !important;
+            display: block !important;
             background: #f8fafc;
             border: 1.5px solid var(--border);
             border-radius: var(--radius-lg);
             padding: 12px 14px 10px;
-            margin-bottom: 18px;
+            margin-bottom: 18px !important;
             box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02);
-            display: block;
         }
 
         .palette-strip-header {
@@ -603,96 +602,27 @@
             transform: scale(1.3);
         }
 
-        /* 📱 MOBILE RESPONSIVE OPTIMIZATIONS */
+        /* 📱 Mobile Specific Styles */
         @media (max-width: 768px) {
-            body {
-                padding: 6px 6px 30px;
-            }
-            .exam-container {
-                padding: 14px 12px;
-                border-radius: 18px;
-            }
-            .top-bar {
-                padding-bottom: 10px;
-                margin-bottom: 12px;
-            }
-            .top-bar h2 {
-                font-size: 15.5px;
-            }
-            .candidate-live-badge {
-                font-size: 10.5px;
-                padding: 3px 8px;
-            }
-            #timer {
-                font-size: 12px;
-                padding: 6px 12px;
-                border-radius: 10px;
-            }
-            .palette-strip-container {
-                padding: 10px 10px 6px;
-                margin-bottom: 12px;
-                border-radius: 14px;
-            }
-            .palette-strip-title {
-                font-size: 11.5px;
-            }
-            .pad-legend-horizontal {
-                gap: 8px;
-                font-size: 9.5px;
-            }
-            .pad-btn {
-                min-width: 34px;
-                width: 34px;
-                height: 34px;
-                font-size: 12px;
-                border-radius: 8px;
-            }
-            #question {
-                font-size: 15px;
-                line-height: 1.65;
-                padding: 12px 14px;
-                margin-bottom: 12px;
-                border-radius: 14px;
-            }
-            .options {
-                gap: 8px;
-                margin-bottom: 14px;
-            }
-            .option-container {
-                padding: 11px 12px;
-                min-height: 48px;
-                border-radius: 12px;
-            }
-            .option-container input[type="radio"] {
-                width: 17px;
-                height: 17px;
-                margin-right: 10px;
-            }
-            .option-container span {
-                font-size: 13.5px;
-                line-height: 1.45;
-            }
-            .buttons {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 8px;
-                padding-top: 12px;
-            }
-            .btn-nav, .btn-clear, .btn-submit {
-                min-height: 44px;
-                font-size: 12.5px;
-                padding: 8px;
-                border-radius: 11px;
-                margin: 0;
-            }
-            .btn-clear {
-                grid-column: span 2;
-                order: 4;
-                min-height: 40px;
-            }
-            .btn-submit {
-                margin-left: 0;
-            }
+            body { padding: 6px 6px 30px; }
+            .exam-container { padding: 14px 12px; border-radius: 18px; }
+            .top-bar { padding-bottom: 10px; margin-bottom: 12px; }
+            .top-bar h2 { font-size: 15.5px; }
+            .candidate-live-badge { font-size: 10.5px; padding: 3px 8px; }
+            #timer { font-size: 12px; padding: 6px 12px; border-radius: 10px; }
+            .palette-strip-container { padding: 10px 10px 6px; margin-bottom: 12px; border-radius: 14px; }
+            .palette-strip-title { font-size: 11.5px; }
+            .pad-legend-horizontal { gap: 8px; font-size: 9.5px; }
+            .pad-btn { min-width: 34px; width: 34px; height: 34px; font-size: 12px; border-radius: 8px; }
+            #question { font-size: 15px; line-height: 1.65; padding: 12px 14px; margin-bottom: 12px; border-radius: 14px; }
+            .options { gap: 8px; margin-bottom: 14px; }
+            .option-container { padding: 11px 12px; min-height: 48px; border-radius: 12px; }
+            .option-container input[type="radio"] { width: 17px; height: 17px; margin-right: 10px; }
+            .option-container span { font-size: 13.5px; line-height: 1.45; }
+            .buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-top: 12px; }
+            .btn-nav, .btn-clear, .btn-submit { min-height: 44px; font-size: 12.5px; padding: 8px; border-radius: 11px; margin: 0; }
+            .btn-clear { grid-column: span 2; order: 4; min-height: 40px; }
+            .btn-submit { margin-left: 0; }
         }
     </style>
 
@@ -914,13 +844,13 @@
     <!-- 🤖 Google Official MediaPipe Face Detection AI Library -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js" crossorigin="anonymous"></script>
 
-    <!-- Questions Data Link (Mapped to js/questions.js with root fallback) -->
-    <script src="js/questions.js" onerror="this.onerror=null;this.src='questions.js';"></script>
+    <!-- Questions Data Link (with v7.0 cache buster) -->
+    <script src="js/questions.js?v=7.0" onerror="this.onerror=null;this.src='questions.js';"></script>
     
-    <!-- Test Logic Script (Mapped to js/test.js with root fallback) -->
-    <script src="js/test.js" onerror="this.onerror=null;this.src='test.js';"></script>
+    <!-- Test Logic Script (with v7.0 cache buster) -->
+    <script src="js/test.js?v=7.0" onerror="this.onerror=null;this.src='test.js';"></script>
 
-    <!-- 🛡️ SAFE ANTI-FREEZE WATCHDOG: Only unveils quiz if candidate is NOT blocked by retest authorization -->
+    <!-- 🛡️ SAFE ANTI-FREEZE WATCHDOG -->
     <script>
         setTimeout(function() {
             var retestModal = document.getElementById("retestAuthModal");
