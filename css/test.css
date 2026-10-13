@@ -5,7 +5,7 @@ Specification: NTA-Standard CBT UI with Horizontal Top Question Palette
 Fully Responsive for Mobile, Tablet, and Desktop Devices
 ========================================================================== */
 
-/* STREAMING_CHUNK:Defining root variables and global design tokens... */
+/* STREAMING_CHUNK:Configuring root design variables... */
 :root {
 --primary: #0284c7;
 --primary-deep: #0369a1;
