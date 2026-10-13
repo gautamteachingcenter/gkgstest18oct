@@ -465,17 +465,19 @@ async function requestScreenWakeLock() {
 function startTimer() {
     requestScreenWakeLock();
 
-    const candidate = getNormalizedCandidate();
-    const savedRoll = localStorage.getItem("gtc_saved_roll");
-    const isSameCandidate = savedRoll && savedRoll === candidate.roll;
-
-    // ⏱️ Resume existing timer on refresh if active session exists
+    // ⏱️ Bulletproof Timer Resume: Always pick saved end time if test in progress
     let savedEndTime = localStorage.getItem("gtc_exam_end_time");
-    if (isSameCandidate && savedEndTime) {
-        examEndTime = parseInt(savedEndTime, 10);
-    } else if (!examEndTime) {
+    if (savedEndTime) {
+        const parsedEnd = parseInt(savedEndTime, 10);
+        if (!isNaN(parsedEnd) && parsedEnd > 0) {
+            examEndTime = parsedEnd;
+        }
+    }
+
+    if (!examEndTime) {
         examEndTime = Date.now() + (examDurationSeconds * 1000);
         localStorage.setItem("gtc_exam_end_time", String(examEndTime));
+        const candidate = getNormalizedCandidate();
         localStorage.setItem("gtc_saved_roll", candidate.roll);
     }
 
@@ -657,7 +659,10 @@ function showQuestion(index) {
     
     currentQuestionIndex = index;
     window.index = index; 
+    
+    // 💾 Persist active question index & active exam state
     localStorage.setItem("gtc_current_q_index", String(index));
+    localStorage.setItem("gtc_exam_in_progress", "true");
     
     const qData = qList[index];
     
@@ -760,7 +765,8 @@ function saveSelectedAnswer() {
                 userAnswers[currentQuestionIndex] = String(chosenIdx);
             }
 
-            // 💾 Instant Auto-Save of selected responses and current position
+            // 💾 Instant Auto-Save of selected responses, position, and active session
+            localStorage.setItem("gtc_exam_in_progress", "true");
             localStorage.setItem("gtc_active_answers", JSON.stringify(userAnswersIndex));
             localStorage.setItem("gtc_active_answers_text", JSON.stringify(userAnswers));
             localStorage.setItem("gtc_current_q_index", String(currentQuestionIndex));
@@ -920,6 +926,7 @@ async function submitTest(isCheating = false) {
     saveSelectedAnswer();
     
     // 🧹 Clean up active session restoration keys on completion
+    localStorage.removeItem("gtc_exam_in_progress");
     localStorage.removeItem("gtc_active_answers");
     localStorage.removeItem("gtc_active_answers_text");
     localStorage.removeItem("gtc_exam_end_time");
@@ -1226,56 +1233,78 @@ window.changeQuestionLanguage = changeQuestionLanguage;
 
 function bootExamSession() {
     const candidate = getNormalizedCandidate();
-    const savedRoll = localStorage.getItem("gtc_saved_roll");
-    const isSameCandidate = savedRoll && savedRoll === candidate.roll;
-
-    // ⏱️ Accurate persistent start-time tracking
-    let savedStartTime = localStorage.getItem("gtc_exam_start_time");
-    if (isSameCandidate && savedStartTime) {
-        window.localTimeTracker = parseInt(savedStartTime, 10);
-    } else {
-        window.localTimeTracker = Date.now();
-        localStorage.setItem("gtc_exam_start_time", String(window.localTimeTracker));
-        localStorage.setItem("gtc_saved_roll", candidate.roll);
-    }
-
     const qList = getQuestionsList();
-    if (qList && qList.length > 0) {
-        // 🔄 Restore existing answers if refreshing the test
-        let restoredAnswers = null;
-        let restoredTexts = null;
-        if (isSameCandidate) {
-            try {
-                restoredAnswers = JSON.parse(localStorage.getItem("gtc_active_answers"));
-                restoredTexts = JSON.parse(localStorage.getItem("gtc_active_answers_text"));
-            } catch(e) {}
-        }
+    const totalQ = (qList && qList.length > 0) ? qList.length : 100;
 
-        if (Array.isArray(restoredAnswers) && restoredAnswers.length === qList.length) {
-            userAnswersIndex = restoredAnswers;
-            userAnswers = Array.isArray(restoredTexts) ? restoredTexts : new Array(qList.length).fill(null);
-        } else {
-            userAnswersIndex = new Array(qList.length).fill(null);
-            userAnswers = new Array(qList.length).fill(null);
-        }
+    // Pre-populate empty arrays
+    userAnswersIndex = new Array(totalQ).fill(null);
+    userAnswers = new Array(totalQ).fill(null);
 
-        // 🔄 Restore current question & warning counts
-        if (isSameCandidate) {
-            warningCount = parseInt(localStorage.getItem("gtc_warning_count") || "0", 10);
-            totalIncidentCount = parseInt(localStorage.getItem("gtc_total_incidents") || "0", 10);
-            currentQuestionIndex = parseInt(localStorage.getItem("gtc_current_q_index") || "0", 10);
-            if (currentQuestionIndex < 0 || currentQuestionIndex >= qList.length) {
-                currentQuestionIndex = 0;
+    const isExamInProgress = localStorage.getItem("gtc_exam_in_progress") === "true";
+    const isNotSubmitted = localStorage.getItem("testSubmitted") !== "true";
+
+    if (isExamInProgress && isNotSubmitted) {
+        // 🔄 1. Restore Answers item-by-item (No restrictive length checks!)
+        try {
+            const savedAnswersRaw = localStorage.getItem("gtc_active_answers");
+            const savedTextsRaw = localStorage.getItem("gtc_active_answers_text");
+            if (savedAnswersRaw) {
+                const parsedAnswers = JSON.parse(savedAnswersRaw);
+                if (Array.isArray(parsedAnswers)) {
+                    for (let i = 0; i < totalQ; i++) {
+                        if (parsedAnswers[i] !== undefined && parsedAnswers[i] !== null) {
+                            userAnswersIndex[i] = parsedAnswers[i];
+                        }
+                    }
+                }
             }
+            if (savedTextsRaw) {
+                const parsedTexts = JSON.parse(savedTextsRaw);
+                if (Array.isArray(parsedTexts)) {
+                    for (let i = 0; i < totalQ; i++) {
+                        if (parsedTexts[i] !== undefined && parsedTexts[i] !== null) {
+                            userAnswers[i] = parsedTexts[i];
+                        }
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn("Answers restore issue:", err);
+        }
+
+        // 🔄 2. Restore exact question position
+        const savedQIndex = parseInt(localStorage.getItem("gtc_current_q_index") || "0", 10);
+        if (!isNaN(savedQIndex) && savedQIndex >= 0 && savedQIndex < totalQ) {
+            currentQuestionIndex = savedQIndex;
         } else {
-            warningCount = 0;
-            totalIncidentCount = 0;
             currentQuestionIndex = 0;
         }
 
-        const totalCountEl = document.getElementById("totalQuestionsCount");
-        if (totalCountEl) totalCountEl.textContent = qList.length;
+        // 🔄 3. Restore warning counters
+        warningCount = parseInt(localStorage.getItem("gtc_warning_count") || "0", 10);
+        totalIncidentCount = parseInt(localStorage.getItem("gtc_total_incidents") || "0", 10);
+
+        // 🔄 4. Restore original start time
+        let savedStartTime = localStorage.getItem("gtc_exam_start_time");
+        if (savedStartTime) {
+            window.localTimeTracker = parseInt(savedStartTime, 10);
+        } else {
+            window.localTimeTracker = Date.now();
+            localStorage.setItem("gtc_exam_start_time", String(window.localTimeTracker));
+        }
+    } else {
+        // Fresh initial test start
+        currentQuestionIndex = 0;
+        warningCount = 0;
+        totalIncidentCount = 0;
+        window.localTimeTracker = Date.now();
+        localStorage.setItem("gtc_exam_start_time", String(window.localTimeTracker));
+        localStorage.setItem("gtc_saved_roll", candidate.roll);
+        localStorage.setItem("gtc_exam_in_progress", "true");
     }
+
+    const totalCountEl = document.getElementById("totalQuestionsCount");
+    if (totalCountEl && qList) totalCountEl.textContent = qList.length;
 
     document.addEventListener("change", function(e) {
         if (e.target && e.target.name === "answer") {
@@ -1293,6 +1322,39 @@ function bootExamSession() {
     
     verifyStudentOnlineEligibility();
 }
+
+// 🚫 BLOCK ACCIDENTAL RELOAD KEY COMBINATIONS (F5, Ctrl+R, Cmd+R)
+window.addEventListener("keydown", function(e) {
+    const isF5 = (e.key === "F5" || e.keyCode === 116);
+    const isCtrlR = (e.ctrlKey || e.metaKey) && (e.key === "r" || e.key === "R" || e.keyCode === 82);
+    
+    if (isF5 || isCtrlR) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof showCustomNotification === "function") {
+            showCustomNotification("⚠️ परीक्षा के दौरान पेज रीफ़्रेश (Reload) करना मना है!", "warning");
+        }
+        return false;
+    }
+});
+
+// 🚫 BLOCK MOBILE PULL-TO-REFRESH GESTURE (Touch action guard)
+let touchStartY = 0;
+window.addEventListener('touchstart', function(e) {
+    if (e.touches && e.touches.length === 1) {
+        touchStartY = e.touches[0].clientY;
+    }
+}, { passive: true });
+
+window.addEventListener('touchmove', function(e) {
+    if (e.touches && e.touches.length === 1) {
+        const currentY = e.touches[0].clientY;
+        // Block pull-down if already scrolled to the top
+        if (window.scrollY <= 0 && currentY > touchStartY) {
+            e.preventDefault();
+        }
+    }
+}, { passive: false });
 
 // ⚠️ CONFIRMATION PROMPT ON ACCIDENTAL RELOAD / BACK
 window.addEventListener("beforeunload", function(e) {
