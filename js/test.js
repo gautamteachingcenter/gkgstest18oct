@@ -465,9 +465,18 @@ async function requestScreenWakeLock() {
 function startTimer() {
     requestScreenWakeLock();
 
-    // Use absolute timestamp to prevent background-tab timer drifting
-    if (!examEndTime) {
+    const candidate = getNormalizedCandidate();
+    const savedRoll = localStorage.getItem("gtc_saved_roll");
+    const isSameCandidate = savedRoll && savedRoll === candidate.roll;
+
+    // ⏱️ Resume existing timer on refresh if active session exists
+    let savedEndTime = localStorage.getItem("gtc_exam_end_time");
+    if (isSameCandidate && savedEndTime) {
+        examEndTime = parseInt(savedEndTime, 10);
+    } else if (!examEndTime) {
         examEndTime = Date.now() + (examDurationSeconds * 1000);
+        localStorage.setItem("gtc_exam_end_time", String(examEndTime));
+        localStorage.setItem("gtc_saved_roll", candidate.roll);
     }
 
     if (timerInterval) clearInterval(timerInterval);
@@ -512,6 +521,7 @@ function handleCheatingAttempt() {
     }, 1500); 
 
     warningCount++;
+    localStorage.setItem("gtc_warning_count", String(warningCount));
     let remaining = 6 - warningCount;
 
     // Trigger smart 30s recovery incident handler
@@ -647,6 +657,7 @@ function showQuestion(index) {
     
     currentQuestionIndex = index;
     window.index = index; 
+    localStorage.setItem("gtc_current_q_index", String(index));
     
     const qData = qList[index];
     
@@ -748,6 +759,11 @@ function saveSelectedAnswer() {
             } else {
                 userAnswers[currentQuestionIndex] = String(chosenIdx);
             }
+
+            // 💾 Instant Auto-Save of selected responses and current position
+            localStorage.setItem("gtc_active_answers", JSON.stringify(userAnswersIndex));
+            localStorage.setItem("gtc_active_answers_text", JSON.stringify(userAnswers));
+            localStorage.setItem("gtc_current_q_index", String(currentQuestionIndex));
         }
     } catch (e) {
         console.warn("Selection save issue:", e);
@@ -823,6 +839,11 @@ function clearSelectedResponse() {
     }
     userAnswersIndex[currentQuestionIndex] = null;
     userAnswers[currentQuestionIndex] = null;
+    
+    // 💾 Save cleared state
+    localStorage.setItem("gtc_active_answers", JSON.stringify(userAnswersIndex));
+    localStorage.setItem("gtc_active_answers_text", JSON.stringify(userAnswers));
+
     updateOptionSelectionUI();
     updateQuestionPad();
 }
@@ -897,6 +918,16 @@ async function submitTest(isCheating = false) {
     isSubmittingProcess = true;
 
     saveSelectedAnswer();
+    
+    // 🧹 Clean up active session restoration keys on completion
+    localStorage.removeItem("gtc_active_answers");
+    localStorage.removeItem("gtc_active_answers_text");
+    localStorage.removeItem("gtc_exam_end_time");
+    localStorage.removeItem("gtc_current_q_index");
+    localStorage.removeItem("gtc_warning_count");
+    localStorage.removeItem("gtc_total_incidents");
+    localStorage.removeItem("gtc_exam_start_time");
+    localStorage.removeItem("gtc_saved_roll");
     
     // 🛑 CRITICAL FIX: Kill all background intervals and pings IMMEDIATELY
     // so they do not collide with the submission lock in Google Apps Script
@@ -976,7 +1007,7 @@ async function submitTest(isCheating = false) {
     let finalScore = rawScore < 0 ? 0 : rawScore; 
     let percentageVal = maxPossibleMarks > 0 ? Math.round((finalScore / maxPossibleMarks) * 100) : 0;
     let percentageStr = percentageVal + "%";
-    let statusText = isCheating ? "CHEATING DETECTED" : (percentageVal >= 60 ? "PASS" : "FAIL");
+    let statusText = isCheating ? "CHEATING DETECTED" : (percentageVal >= 70 ? "PASS" : "FAIL");
 
     const candidate = getNormalizedCandidate();
 
@@ -1177,7 +1208,7 @@ function initQuizScreenAfterCamera() {
     startProctorLiveListener();
     startStudentStatusPinger();
     startTimer();
-    showQuestion(0);
+    showQuestion(currentQuestionIndex);
 }
 
 // Global function exposures
@@ -1194,12 +1225,54 @@ window.showCustomNotification = showCustomNotification;
 window.changeQuestionLanguage = changeQuestionLanguage;
 
 function bootExamSession() {
-    window.localTimeTracker = Date.now();
+    const candidate = getNormalizedCandidate();
+    const savedRoll = localStorage.getItem("gtc_saved_roll");
+    const isSameCandidate = savedRoll && savedRoll === candidate.roll;
+
+    // ⏱️ Accurate persistent start-time tracking
+    let savedStartTime = localStorage.getItem("gtc_exam_start_time");
+    if (isSameCandidate && savedStartTime) {
+        window.localTimeTracker = parseInt(savedStartTime, 10);
+    } else {
+        window.localTimeTracker = Date.now();
+        localStorage.setItem("gtc_exam_start_time", String(window.localTimeTracker));
+        localStorage.setItem("gtc_saved_roll", candidate.roll);
+    }
 
     const qList = getQuestionsList();
     if (qList && qList.length > 0) {
-        userAnswersIndex = new Array(qList.length).fill(null);
-        userAnswers = new Array(qList.length).fill(null);
+        // 🔄 Restore existing answers if refreshing the test
+        let restoredAnswers = null;
+        let restoredTexts = null;
+        if (isSameCandidate) {
+            try {
+                restoredAnswers = JSON.parse(localStorage.getItem("gtc_active_answers"));
+                restoredTexts = JSON.parse(localStorage.getItem("gtc_active_answers_text"));
+            } catch(e) {}
+        }
+
+        if (Array.isArray(restoredAnswers) && restoredAnswers.length === qList.length) {
+            userAnswersIndex = restoredAnswers;
+            userAnswers = Array.isArray(restoredTexts) ? restoredTexts : new Array(qList.length).fill(null);
+        } else {
+            userAnswersIndex = new Array(qList.length).fill(null);
+            userAnswers = new Array(qList.length).fill(null);
+        }
+
+        // 🔄 Restore current question & warning counts
+        if (isSameCandidate) {
+            warningCount = parseInt(localStorage.getItem("gtc_warning_count") || "0", 10);
+            totalIncidentCount = parseInt(localStorage.getItem("gtc_total_incidents") || "0", 10);
+            currentQuestionIndex = parseInt(localStorage.getItem("gtc_current_q_index") || "0", 10);
+            if (currentQuestionIndex < 0 || currentQuestionIndex >= qList.length) {
+                currentQuestionIndex = 0;
+            }
+        } else {
+            warningCount = 0;
+            totalIncidentCount = 0;
+            currentQuestionIndex = 0;
+        }
+
         const totalCountEl = document.getElementById("totalQuestionsCount");
         if (totalCountEl) totalCountEl.textContent = qList.length;
     }
@@ -1220,6 +1293,42 @@ function bootExamSession() {
     
     verifyStudentOnlineEligibility();
 }
+
+// ⚠️ CONFIRMATION PROMPT ON ACCIDENTAL RELOAD / BACK
+window.addEventListener("beforeunload", function(e) {
+    if (localStorage.getItem("testSubmitted") !== "true" && !isSubmittingProcess) {
+        notifyServerStudentLeft();
+        e.preventDefault();
+        e.returnValue = "परीक्षा चल रही है! क्या आप वाकई पेज रिफ्रेश या छोड़ना चाहते हैं?";
+        return e.returnValue;
+    }
+});
+
+// 🚪 INSTANT TAB / BROWSER CLOSE DETECTOR
+function notifyServerStudentLeft() {
+    if (localStorage.getItem("testSubmitted") === "true" || isSubmittingProcess) return;
+    const candidate = getNormalizedCandidate();
+    if (!candidate.roll || !window.SCRIPT_URL) return;
+
+    const payload = new URLSearchParams();
+    payload.append("action", "student_left");
+    payload.append("roll", candidate.roll);
+    payload.append("name", candidate.name);
+
+    if (navigator.sendBeacon) {
+        navigator.sendBeacon(window.SCRIPT_URL, payload);
+    } else {
+        fetch(window.SCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",
+            keepalive: true,
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: payload.toString()
+        }).catch(() => {});
+    }
+}
+
+window.addEventListener("pagehide", notifyServerStudentLeft);
 
 if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", bootExamSession);
