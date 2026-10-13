@@ -79,6 +79,11 @@
             -webkit-font-smoothing: antialiased;
         }
 
+        html, body {
+            overscroll-behavior-y: contain !important; /* 🚀 Prevents mobile pull-to-refresh on Chrome & Safari */
+            overscroll-behavior: none !important;
+        }
+
         body {
             background-color: #f8fafc;
             min-height: 100vh;
@@ -593,12 +598,37 @@
             </div>
         </div>
 
+        <!-- 🔢 HORIZONTAL SCROLLABLE QUESTION PALETTE AT TOP -->
+        <section class="palette-strip-container">
+            <div class="palette-strip-header">
+                <span class="palette-strip-title">Question Palette (1 - <span id="paletteTotalCount">100</span>)</span>
+                
+                <div class="pad-legend-horizontal">
+                    <div class="legend-item">
+                        <div class="legend-indicator legend-answered"></div>
+                        <span>Answered</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-indicator legend-unanswered"></div>
+                        <span>Unanswered</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-indicator legend-current"></div>
+                        <span>Current</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Horizontal Swipe/Scroll List (Left-Right) -->
+            <div id="questionList" class="horizontal-pad-scroll"></div>
+        </section>
+
         <div class="main-layout">
-            <!-- 📝 Left Side: Question and Options -->
+            <!-- 📝 Question and Options Section -->
             <section class="question-side">
                 <div class="question-box">
                     <div class="question-meta-strip">
-                        <h3>Question <span id="qno">1</span> of <span id="totalQuestionsCount">30</span></h3>
+                        <h3>Question <span id="qno">1</span> of <span id="totalQuestionsCount">100</span></h3>
                         <div class="marking-pill">
                             <span class="marking-pos">+2.00</span>
                             <span>•</span>
@@ -625,29 +655,6 @@
                     <button id="submitBtn" type="button" class="btn-submit" onclick="submitTestFromButton()">Submit Test 🚀</button>
                 </div>
             </section>
-
-            <!-- 🔢 Right Side: Question Pad -->
-            <aside class="pad-side">
-                <h4>Question Palette</h4>
-
-                <!-- NTA Standard Question Legend Indicators -->
-                <div class="pad-legend">
-                    <div class="legend-item">
-                        <div class="legend-indicator legend-answered"></div>
-                        <span>Answered</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-indicator legend-unanswered"></div>
-                        <span>Not Answered</span>
-                    </div>
-                    <div class="legend-item" style="grid-column: span 2;">
-                        <div class="legend-indicator legend-current"></div>
-                        <span>Current Question</span>
-                    </div>
-                </div>
-
-                <div id="questionList"></div>
-            </aside>
         </div>
     </main>
 
