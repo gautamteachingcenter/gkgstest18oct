@@ -72,11 +72,11 @@ async function setupLiveProctorCamera() {
             cameraContainer = document.createElement("div");
             cameraContainer.id = "proctorCameraContainer";
             cameraContainer.innerHTML = `
-                <div style="position: fixed; bottom: 75px; right: 16px; z-index: 99990; display: flex; flex-direction: column; align-items: center; pointer-events: none;">
-                    <div style="width: 78px; height: 78px; border-radius: 50%; overflow: hidden; border: 2.5px solid #0284c7; box-shadow: 0 4px 18px rgba(2, 132, 199, 0.4); background: #000; position: relative;">
+                <div style="position: fixed; bottom: 12px; left: 12px; z-index: 99990; display: flex; flex-direction: column; align-items: center; pointer-events: none;">
+                    <div style="width: 72px; height: 72px; border-radius: 50%; overflow: hidden; border: 2.5px solid #0284c7; box-shadow: 0 4px 18px rgba(2, 132, 199, 0.4); background: #000; position: relative;">
                         <video id="proctorVideoFeed" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
                     </div>
-                    <span id="camRecBadge" style="margin-top: 4px; background: #ffffff; border: 1.5px solid #0284c7; color: #0284c7; font-size: 9.5px; font-weight: 800; padding: 2px 8px; border-radius: 14px; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+                    <span id="camRecBadge" style="margin-top: 4px; background: #ffffff; border: 1.5px solid #0284c7; color: #0284c7; font-size: 9px; font-weight: 800; padding: 2px 7px; border-radius: 14px; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 2px 6px rgba(0,0,0,0.12);">
                         🟢 AI ACTIVE
                     </span>
                 </div>
@@ -818,17 +818,24 @@ function updateQuestionPad() {
         }
         
         let activeStyle = isCurrent 
-            ? "border: 2px solid #0369a1; box-shadow: 0 0 10px rgba(2, 132, 199, 0.45); transform: scale(1.06);" 
+            ? "border: 2px solid #0369a1; box-shadow: 0 0 10px rgba(2, 132, 199, 0.45); transform: scale(1.08);" 
             : `border: 1.5px solid ${borderCol};`;
         
-        padHTML += `<button type="button" onclick="jumpToQuestion(${i})" class="pad-btn" style="margin: 2px; border-radius: 8px; cursor: pointer; background: ${bgCol}; color: ${textCol}; font-weight: 700; ${activeStyle}">${i + 1}</button>`;
+        padHTML += `<button type="button" onclick="jumpToQuestion(${i})" class="pad-btn" style="min-width: 38px; width: 38px; height: 38px; flex-shrink: 0; margin: 0; border-radius: 10px; cursor: pointer; background: ${bgCol}; color: ${textCol}; font-weight: 700; ${activeStyle}">${i + 1}</button>`;
     }
     padContainer.innerHTML = padHTML;
 
+    // 🚀 Container-only horizontal scroll: Strictly prevents the page from jumping vertically!
     setTimeout(() => {
         const activeBtn = padContainer.children[currentQuestionIndex];
-        if (activeBtn && typeof activeBtn.scrollIntoView === "function") {
-            activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        if (activeBtn) {
+            const containerWidth = padContainer.offsetWidth;
+            const btnLeft = activeBtn.offsetLeft;
+            const btnWidth = activeBtn.offsetWidth;
+            padContainer.scrollTo({
+                left: btnLeft - (containerWidth / 2) + (btnWidth / 2),
+                behavior: 'smooth'
+            });
         }
     }, 40);
 }
